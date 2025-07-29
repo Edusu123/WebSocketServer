@@ -1,42 +1,13 @@
 using System.Net.WebSockets;
+using WebSocketServer.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
 app.UseWebSockets();
+app.UseWebSocketServer();
 
-app.Use(async (context, next) =>
-{
-  WriteRequestParam(context);
-
-  if (context.WebSockets.IsWebSocketRequest)
-  {
-    WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-    Console.WriteLine("WebSocket Connected");
-
-    await ReceiveMessage(webSocket, async (result, buffer) =>
-    {
-      if (result.MessageType == WebSocketMessageType.Text)
-      {
-        Console.WriteLine("Message Received");
-        return;
-      }
-      else if (result.MessageType == WebSocketMessageType.Close)
-      {
-        Console.WriteLine("Received Close Message");
-        return;
-      }
-    });
-  }
-  else
-  {
-    Console.WriteLine("Hello from the second request delegate");
-    await next();
-  }
-});
-
-app.MapGet("/", () => "Hello World!");
-
+// app.MapGet("/", () => "Hello World!");
 
 app.Run(async (context) =>
 {
@@ -45,29 +16,3 @@ app.Run(async (context) =>
 });
 
 app.Run();
-
-static void WriteRequestParam(HttpContext context)
-{
-  Console.WriteLine("Request method: {0}", context.Request.Method);
-  Console.WriteLine("Request protocol: {0}", context.Request.Protocol);
-
-  if (context.Request.Headers != null)
-  {
-    foreach (var h in context.Request.Headers)
-    {
-      Console.WriteLine("--> {0}:{1}", h.Key, h.Value);
-    }
-  }
-}
-
-static async Task ReceiveMessage(WebSocket webSocket, Action<WebSocketReceiveResult, byte[]> handleMessage)
-{
-  var buffer = new byte[1024 * 4];
-
-  while (webSocket.State == WebSocketState.Open)
-  {
-    var result = await webSocket.ReceiveAsync(buffer: new ArraySegment<byte>(buffer), CancellationToken.None);
-
-    handleMessage(result, buffer);
-  }
-}
