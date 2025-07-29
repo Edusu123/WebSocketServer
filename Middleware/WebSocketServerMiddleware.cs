@@ -3,9 +3,10 @@ using System.Text;
 
 namespace WebSocketServer.Middleware
 {
-  public class WebSocketServerMiddleware(RequestDelegate next)
+  public class WebSocketServerMiddleware(RequestDelegate next, WebSocketServerConnectionManager manager)
   {
     private readonly RequestDelegate _next = next;
+    private readonly WebSocketServerConnectionManager _manager = manager;
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -14,6 +15,10 @@ namespace WebSocketServer.Middleware
         WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
         Console.WriteLine("WebSocket Connected");
+
+        string connID = _manager.AddSocket(webSocket);
+
+        await SendConnIDAsync(webSocket, connID); //Call to new method here
 
         await Receive(webSocket, async (result, buffer) =>
         {
@@ -49,6 +54,12 @@ namespace WebSocketServer.Middleware
 
         handleMessage(result, buffer);
       }
+    }
+
+    private async Task SendConnIDAsync(WebSocket socket, string connID)
+    {
+      var buffer = Encoding.UTF8.GetBytes("ConnID: " + connID);
+      await socket.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
     }
   }
 }

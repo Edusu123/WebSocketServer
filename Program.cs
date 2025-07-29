@@ -1,13 +1,13 @@
-using System.Net.WebSockets;
 using WebSocketServer.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddWebSocketServerConnectionManager();
+
 var app = builder.Build();
 
 app.UseWebSockets();
-app.UseWebSocketServer();
-
-// app.MapGet("/", () => "Hello World!");
+app.UseWebSocketServer(); ;
 
 app.Run(async (context) =>
 {
