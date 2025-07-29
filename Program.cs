@@ -13,6 +13,20 @@ app.Use(async (context, next) =>
   {
     WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
     Console.WriteLine("WebSocket Connected");
+
+    await ReceiveMessage(webSocket, async (result, buffer) =>
+    {
+      if (result.MessageType == WebSocketMessageType.Text)
+      {
+        Console.WriteLine("Message Received");
+        return;
+      }
+      else if (result.MessageType == WebSocketMessageType.Close)
+      {
+        Console.WriteLine("Received Close Message");
+        return;
+      }
+    });
   }
   else
   {
@@ -32,7 +46,7 @@ app.Run(async (context) =>
 
 app.Run();
 
-void WriteRequestParam(HttpContext context)
+static void WriteRequestParam(HttpContext context)
 {
   Console.WriteLine("Request method: {0}", context.Request.Method);
   Console.WriteLine("Request protocol: {0}", context.Request.Protocol);
@@ -43,5 +57,17 @@ void WriteRequestParam(HttpContext context)
     {
       Console.WriteLine("--> {0}:{1}", h.Key, h.Value);
     }
+  }
+}
+
+static async Task ReceiveMessage(WebSocket webSocket, Action<WebSocketReceiveResult, byte[]> handleMessage)
+{
+  var buffer = new byte[1024 * 4];
+
+  while (webSocket.State == WebSocketState.Open)
+  {
+    var result = await webSocket.ReceiveAsync(buffer: new ArraySegment<byte>(buffer), CancellationToken.None);
+
+    handleMessage(result, buffer);
   }
 }
